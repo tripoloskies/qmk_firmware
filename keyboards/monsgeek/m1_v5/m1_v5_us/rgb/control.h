@@ -23,7 +23,7 @@ extern bool bat_req_flag;
 
 void rgb_control_init(void);
 void rgb_blink_dir(void);
-bool hs_reset_settings_user(void);
+void factory_reset_indicator(void);
 void rgb_req_bat_percentage(void);
 
 void rgb_nkro_toggle(void);

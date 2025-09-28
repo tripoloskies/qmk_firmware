@@ -36,9 +36,8 @@ void rgb_blink_dir(void) {
     rgb_queue_frame_queue(INDICATOR_QUEUE_MAIN, 0xFF, (rgb_t){0, 0, 0}, 250, 1, NULL);
 }
 
-bool hs_reset_settings_user(void) {
-    rgb_queue_frame_queue(INDICATOR_QUEUE_MAIN, 0xFF, (rgb_t){0, 0, 0}, 250, 3, NULL);
-    return true;
+void factory_reset_indicator(void) {
+    rgb_queue_frame_queue(INDICATOR_QUEUE_MAIN, 0xFF, (rgb_t){255, 255, 255}, 150, 3, NULL);
 }
 
 void rgb_nkro_toggle(void) {

@@ -660,6 +660,7 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
 
 
     if (post_init_timer) {
+        rgb_queue_execute();
         return true;
     }
 
