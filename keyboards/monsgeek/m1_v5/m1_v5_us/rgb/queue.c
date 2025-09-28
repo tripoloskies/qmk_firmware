@@ -116,7 +116,7 @@ void rgb_queue_frame_queue(enum indicator_slots slot_index, uint8_t index, rgb_t
 
     }
     else {
-        for (uint8_t i = 0; i <= blink_times; i++) {
+        for (uint8_t i = 1; i <= blink_times; i++) {
             rgb_queue_enqueue(&indicator_queue[slot_index], dat_frame);
             rgb_queue_enqueue(&indicator_queue[slot_index], dat_frame_blink);
         }
