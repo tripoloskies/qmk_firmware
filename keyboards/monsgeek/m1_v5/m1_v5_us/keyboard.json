@@ -28,11 +28,15 @@
         "extrakey": true,
         "mousekey": true,
         "nkro": true,
-        "nkro_default": true,
         "rgb_matrix": true,
         "deferred_exec": true,
         "rgblight": false,
         "encoder": true
+    },
+    "host": {
+        "default": {
+            "nkro": true
+        }
     },
     "keycodes": [
         {

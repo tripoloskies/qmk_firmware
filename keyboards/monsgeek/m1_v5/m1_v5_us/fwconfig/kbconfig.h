@@ -18,7 +18,6 @@ typedef union {
         uint8_t devs : 3;
         uint8_t arrow_swap_flag : 1;
         uint8_t ctrl_app_flag : 1;
-        uint8_t nkro_flag : 1;
     };
 } kbconfig_t;
 

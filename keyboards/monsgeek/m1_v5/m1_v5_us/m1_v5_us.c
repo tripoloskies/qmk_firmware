@@ -25,9 +25,6 @@
 #endif
 
 
-#ifdef NKRO_ENABLE
-#   include "features/nkro.h"
-#endif
 
 
 enum layers {
@@ -95,16 +92,10 @@ void keyboard_post_init_kb(void) {
     setPinInputHigh(SYSTEM_WIN_PIN);
     setPinInputHigh(SYSTEM_MAC_PIN);
 
-
 #ifdef WIRELESS_ENABLE
     wireless_init();
     post_init_timer = timer_read32();
 #endif
-
-#ifdef NKRO_ENABLE
-    nkro_read_config();
-#endif
-
     rgb_control_init();
     keyboard_post_init_user();
 }
@@ -268,18 +259,16 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
 
         case BT_TEST: {
             if (record->event.pressed) {
-                md_send_devctrl(0x62);
+                md_send_devctrl(MD_SND_CMD_DEVCTRL_FORCED_PAIRING_BT);
             }
             return false;
         } break;
         case NK_TOGG: {
 #ifdef NKRO_ENABLE
             if (record->event.pressed) {
-                nkro_toggle_config();
                 rgb_nkro_toggle();
             }
 #endif
-            return false;
         } break;
         case EE_CLR: {
             if (record->event.pressed) {
@@ -388,6 +377,8 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
 ///     QMK Housekeeping Function                                        ///
 ////////////////////////////////////////////////////////////////////////////
 void housekeeping_task_user(void) {
+
+
     uint8_t hs_now_mode;
     static uint32_t hs_current_time;
     static uint32_t rgb_control_sync_time;

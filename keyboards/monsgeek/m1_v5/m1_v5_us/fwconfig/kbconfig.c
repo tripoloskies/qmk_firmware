@@ -15,11 +15,9 @@ uint32_t kbconfig_read(void) {
 }
 
 void kbconfig_default(void) {
-
     kbconfig.flag             = true;
     kbconfig.arrow_swap_flag  = 0;
     kbconfig.ctrl_app_flag    = 0;
-    kbconfig.nkro_flag        = 0;
 
 #ifdef WIRELESS_ENABLE
     kbconfig.devs = DEVS_USB;
