@@ -8,4 +8,5 @@
 
 bool process_record_arrow_swap(uint16_t keycode, keyrecord_t *record);
 bool process_record_system(uint16_t keycode, keyrecord_t *record);
+bool process_record_system(uint16_t keycode, keyrecord_t *record);
 bool process_record_rgb_controls(uint16_t keycode, keyrecord_t *record);

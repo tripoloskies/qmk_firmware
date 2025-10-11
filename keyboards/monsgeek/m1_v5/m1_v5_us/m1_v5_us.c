@@ -13,7 +13,6 @@
 #include "fwconfig/fwconfig.h"
 #include "process/process.h"
 
-
 #ifdef RGB_MATRIX_ENABLE
 #    include "rgb/rgb.h"
 #endif
@@ -24,9 +23,9 @@
 #    include "lowpower.h"
 #endif
 
-
-
-
+/*
+ * Layers
+ */
 enum layers {
     _BL = 0,
     _FL,
@@ -35,17 +34,22 @@ enum layers {
     _FBL,
 };
 
-
-
-static uint32_t post_init_timer = 0x00;
-
-bool enable_bat_indicators = true;
+/*
+ * Flags
+ */
+static bool bat_indicators_flag = true;
 static bool battery_low_flag = false;
 
-uint32_t ee_clr_timer = 0;
-uint32_t bat_indicator_cnt   = true;
+/*
+ * Timers
+ */
+uint32_t post_init_timer = 0x00;
+uint32_t factory_reset_timer = 0;
+uint32_t bat_indicator_timer = true;
+
+
 uint32_t hs_ct_time;
-RGB rgb_test_open;
+rgb_t rgb_test_open;
 
 
 ////////////////////////////////////////////////////////////////////////////
@@ -96,6 +100,8 @@ void keyboard_post_init_kb(void) {
     wireless_init();
     post_init_timer = timer_read32();
 #endif
+
+    rgb_test_open = hsv_to_rgb((HSV){.h = 0, .s = 0, .v = RGB_MATRIX_VAL_STEP * 5});
     rgb_control_init();
     keyboard_post_init_user();
 }
@@ -241,45 +247,14 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
 #endif
     if (
     process_record_arrow_swap(keycode, record) != true ||
-    process_record_rgb_controls(keycode, record) != true
+    process_record_rgb_controls(keycode, record) != true ||
+    process_record_system(keycode, record) != true
     ) {
         return false;
     }
 
 
-
     switch (keycode) {
-        case QK_BOOT: {
-            if (record->event.pressed) {
-                dprintf("into boot!!!\r\n");
-                eeconfig_disable();
-                bootloader_jump();
-            }
-        } break;
-
-        case BT_TEST: {
-            if (record->event.pressed) {
-                md_send_devctrl(MD_SND_CMD_DEVCTRL_FORCED_PAIRING_BT);
-            }
-            return false;
-        } break;
-        case NK_TOGG: {
-#ifdef NKRO_ENABLE
-            if (record->event.pressed) {
-                rgb_nkro_toggle();
-            }
-#endif
-        } break;
-        case EE_CLR: {
-            if (record->event.pressed) {
-                ee_clr_timer = timer_read32();
-            } else {
-                ee_clr_timer = 0;
-            }
-
-            return false;
-        } break;
-
         case KC_LCMD: {
             if (keymap_is_mac_system()) {
                 if (keymap_config.no_gui) {
@@ -313,18 +288,13 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
         case HS_DIR: {
             if (record->event.pressed) {
                 kbconfig.arrow_swap_flag = !kbconfig.arrow_swap_flag;
-                rgb_test_open     = hsv_to_rgb((HSV){.h = 0, .s = 0, .v = RGB_MATRIX_VAL_STEP * 5});
-                rgb_queue_frame_queue(INDICATOR_QUEUE_MAIN, 0xFF, (rgb_t){rgb_test_open.r, rgb_test_open.g, rgb_test_open.b}, 250, 1, NULL);
+                rgb_queue_frame_queue(INDICATOR_QUEUE_MAIN, 0xFF, rgb_test_open, 250, 1, NULL);
                 kbconfig_update();
             }
             return false;
         } break;
         case HS_CT_A: {
-            if (record->event.pressed) {
-                hs_ct_time = timer_read32();
-            } else {
-                hs_ct_time = 0;
-            }
+            hs_ct_time = record->event.pressed ? timer_read32() : 0;
             return false;
         } break;
         case KC_RCTL: {
@@ -335,8 +305,6 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
                     unregister_code16(KC_APP);
                 }
                 return false;
-            } else {
-                return true;
             }
         } break;
         case HS_SIRI: {
@@ -378,10 +346,10 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
 ////////////////////////////////////////////////////////////////////////////
 void housekeeping_task_user(void) {
 
-
-    uint8_t hs_now_mode;
     static uint32_t hs_current_time;
     static uint32_t rgb_control_sync_time;
+
+    uint8_t hs_now_mode;
     bool usb_insert_flag;
     bool bat_full_flag;
 
@@ -413,8 +381,7 @@ void housekeeping_task_user(void) {
 
     if (timer_elapsed32(hs_ct_time) > 3000 && hs_ct_time) {
         kbconfig.ctrl_app_flag = !kbconfig.ctrl_app_flag;
-        rgb_test_open          = hsv_to_rgb((HSV){.h = 0, .s = 0, .v = RGB_MATRIX_VAL_STEP * 5});
-        rgb_queue_frame_queue(INDICATOR_QUEUE_MAIN, 0xFF, (rgb_t){rgb_test_open.r, rgb_test_open.g, rgb_test_open.b}, 250, 1, NULL);
+        rgb_queue_frame_queue(INDICATOR_QUEUE_MAIN, 0xFF, rgb_test_open, 250, 1, NULL);
         kbconfig_update();
         hs_ct_time = 0;
     }
@@ -667,10 +634,10 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
             rgb_matrix_set_color(10, 0x00, 0xFF, 0xFF);
     }
 
-    if (ee_clr_timer && timer_elapsed32(ee_clr_timer) > 3000) {
+    if (factory_reset_timer && timer_elapsed32(factory_reset_timer) > 3000) {
         factory_reset();
-        enable_bat_indicators = false;
-        ee_clr_timer = 0;
+        bat_indicators_flag = false;
+        factory_reset_timer = 0;
     }
 
     if (host_keyboard_led_state().caps_lock)
@@ -685,14 +652,14 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     wls_indicator_trigger();
 
     // Stop doing battery indicator monitoring if there's an ongoing factory reset.
-    if (enable_bat_indicators) {
+    if (bat_indicators_flag) {
         bat_indicators();
-        bat_indicator_cnt = timer_read32();
+        bat_indicator_timer = timer_read32();
     }
     else {
-        if (timer_elapsed32(bat_indicator_cnt) > 2000) {
-            enable_bat_indicators = true;
-            bat_indicator_cnt     = timer_read32();
+        if (timer_elapsed32(bat_indicator_timer) > 2000) {
+            bat_indicators_flag = true;
+            bat_indicator_timer     = timer_read32();
         }
     }
 
